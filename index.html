@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Iso Timer</title>
+<meta name="description" content="Minuteur d'exercices isométriques">
+<meta name="theme-color" content="#111418">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Iso Timer">
+<style>
+:root{
+  --bg:#111418; --card:#1b2027; --line:#2c333d; --text:#eef1f5; --muted:#9aa4b2;
+  --accent:#4cc2ff; --danger:#ff6b6b; --rest:#2a3038; --trans:#3a3326;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:.6em 1em}
+button.primary{background:var(--accent);color:#04121c;border-color:transparent;font-weight:700}
+button.ghost{background:transparent}
+button:disabled{opacity:.4}
+input[type=number],input[type=text]{background:#0d1014;border:1px solid var(--line);border-radius:8px;padding:.45em .55em;width:100%;min-width:0}
+input[type=number]{text-align:center}
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:.2em 0 .6em;display:flex;align-items:center;gap:.5em}
+h1 small{font-size:.8rem;color:var(--muted);font-weight:400;margin-left:auto}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px}
+.seg button.on{background:var(--accent);color:#04121c;font-weight:700}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px 0}
+.row{display:grid;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.field input{color:var(--text);font-size:1rem}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.exo{border-left:6px solid var(--c);}
+.exo-head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.exo-head .letter{width:28px;height:28px;border-radius:50%;background:var(--c);color:#000;display:grid;place-items:center;font-weight:800;flex:none}
+.exo-head input{font-weight:600}
+.icon-btn{padding:.35em .55em;min-width:36px}
+.check{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--text);font-size:.95rem}
+.check input{width:20px;height:20px}
+.hidden{display:none!important}
+.dim{opacity:.35;pointer-events:none}
+.total{color:var(--muted);text-align:center;margin:10px 0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .primary{flex:1;font-size:1.15rem;padding:.9em}
+.hint{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+/* run screen */
+#run{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--rest);transition:background .25s;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 16px)}
+#run .top{display:flex;justify-content:space-between;color:rgba(255,255,255,.8);font-size:.95rem}
+#run .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+#phase{font-size:1.1rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+#exoName{font-size:clamp(1.6rem,7vw,3rem);font-weight:800;line-height:1.1}
+#sub{font-size:1.1rem;opacity:.85}
+#clock{font-size:clamp(7rem,38vw,18rem);font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+#next{opacity:.75;font-size:1rem;min-height:1.4em}
+.bar{height:8px;background:rgba(0,0,0,.25);border-radius:4px;overflow:hidden;margin:10px 0 16px}
+.bar div{height:100%;background:rgba(255,255,255,.85);width:0}
+#run .ctrl{display:flex;gap:10px}
+#run .ctrl button{flex:1;padding:1em;font-size:1.05rem;background:rgba(0,0,0,.28);border-color:rgba(255,255,255,.15);color:#fff}
+#run.work{color:#08090b}
+#run.work .top{color:rgba(0,0,0,.7)}
+#run.work .ctrl button{background:rgba(0,0,0,.18);color:#08090b;border-color:rgba(0,0,0,.2)}
+#run.work .bar div{background:rgba(0,0,0,.6)}
+#run.trans{background:var(--trans)}
+</style>
+</head>
+<body>
+
+<main id="setup" class="wrap">
+  <h1>⏱ Iso Timer <small id="ver"></small></h1>
+
+  <div class="seg" role="tablist">
+    <button data-mode="seq" class="on">Enchaîné</button>
+    <button data-mode="circuit">Circuit</button>
+  </div>
+  <p class="hint" id="modeHint"></p>
+
+  <section class="panel">
+    <div class="row g3">
+      <label class="field" id="roundsField">Tours<input type="number" id="rounds" min="1" max="20" inputmode="numeric"></label>
+      <label class="field">Changement d'exo (s)<input type="number" id="tExo" min="3" max="120" inputmode="numeric"></label>
+      <label class="field">Changement de côté (s)<input type="number" id="tSide" min="3" max="120" inputmode="numeric"></label>
+    </div>
+    <p class="hint">Les pauses font au moins 3 s : c'est le temps du « bip · bip · biiip » de départ.</p>
+  </section>
+
+  <div id="exos"></div>
+
+  <div class="actions" style="margin:6px 0 4px">
+    <button id="addExo" class="ghost" style="flex:1">+ Ajouter un exo</button>
+  </div>
+
+  <p class="total" id="total"></p>
+
+  <div class="actions">
+    <button id="start" class="primary">▶ Démarrer</button>
+  </div>
+  <p class="hint" style="text-align:center">iPhone : désactive le mode silencieux, sinon les bips ne sortent pas.</p>
+</main>
+
+<section id="run" class="hidden" aria-live="polite">
+  <div class="top"><span id="progressTxt"></span><span id="remainTxt"></span></div>
+  <div class="mid">
+    <div id="phase"></div>
+    <div id="exoName"></div>
+    <div id="sub"></div>
+    <div id="clock">0</div>
+    <div id="next"></div>
+  </div>
+  <div class="bar"><div id="barFill"></div></div>
+  <div class="ctrl">
+    <button id="pauseBtn">⏸ Pause</button>
+    <button id="skipBtn">⏭ Passer</button>
+    <button id="stopBtn">⏹ Stop</button>
+  </div>
+</section>
+
+<template id="exoTpl">
+  <section class="panel exo">
+    <div class="exo-head">
+      <span class="letter"></span>
+      <input type="text" class="name" placeholder="Nom de l'exo" maxlength="40">
+      <button class="icon-btn test" title="Écouter ses bips">🔊</button>
+      <button class="icon-btn up" title="Monter">↑</button>
+      <button class="icon-btn down" title="Descendre">↓</button>
+      <button class="icon-btn del" title="Supprimer">✕</button>
+    </div>
+    <div class="row g3">
+      <label class="field">Effort (s)<input type="number" class="work" min="5" max="600" inputmode="numeric"></label>
+      <label class="field seqOnly">Pause (s)<input type="number" class="rest" min="3" max="600" inputmode="numeric"></label>
+      <label class="field seqOnly">Sets<input type="number" class="sets" min="1" max="10" inputmode="numeric"></label>
+    </div>
+    <label class="check"><input type="checkbox" class="sides"> 2 côtés (gauche puis droite)</label>
+  </section>
+</template>
+
+<script>
+const VERSION = 'v1';
+document.getElementById('ver').textContent = VERSION;
+
+/* ---------- state ---------- */
+const COLORS = ['#4cc2ff','#ffb547','#7ee081','#ff7ab8','#b39cff','#ff8a5c','#5ce0d0','#e6e65c'];
+const PITCH  = [392, 523, 659, 784, 988, 1175, 1319, 1568]; // A grave → aigu
+const STORE_KEY = 'isoTimer.config.v1';
+const DEFAULT = {
+  mode:'seq', rounds:3, tExo:5, tSide:3, prep:5,
+  exos:[ {name:'Planche', work:30, rest:60, sets:3, sides:false} ]
+};
+let cfg = load();
+
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && Array.isArray(s.exos) && s.exos.length) return {...DEFAULT, ...s}; }catch(e){}
+  return structuredClone(DEFAULT);
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); }catch(e){} }
+const clampInt = (v,min,max,def)=>{ v = parseInt(v,10); if(isNaN(v)) v = def; return Math.min(max,Math.max(min,v)); };
+
+/* ---------- setup UI ---------- */
+const $ = id => document.getElementById(id);
+const exosEl = $('exos');
+
+function renderSetup(){
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===cfg.mode));
+  $('modeHint').textContent = cfg.mode==='seq'
+    ? "Tous les sets de A (avec pauses), puis B, puis C…"
+    : "A → B → C → A → B → C… sans repos, sur le nombre de tours choisi.";
+  $('roundsField').classList.toggle('dim', cfg.mode!=='circuit');
+  $('rounds').value = cfg.rounds; $('tExo').value = cfg.tExo; $('tSide').value = cfg.tSide;
+  exosEl.innerHTML = '';
+  cfg.exos.forEach((ex,i)=>{
+    const n = $('exoTpl').content.firstElementChild.cloneNode(true);
+    n.style.setProperty('--c', COLORS[i%COLORS.length]);
+    n.querySelector('.letter').textContent = String.fromCharCode(65+i);
+    const f = (sel,key)=>{ const el=n.querySelector(sel); el.value=ex[key]; el.addEventListener('change',()=>{ readExo(n,i); }); };
+    f('.name','name'); f('.work','work'); f('.rest','rest'); f('.sets','sets');
+    const sd = n.querySelector('.sides'); sd.checked = ex.sides; sd.addEventListener('change',()=>readExo(n,i));
+    n.querySelectorAll('.seqOnly').forEach(el=>el.classList.toggle('dim', cfg.mode!=='seq'));
+    n.querySelector('.up').disabled = i===0;
+    n.querySelector('.down').disabled = i===cfg.exos.length-1;
+    n.querySelector('.del').disabled = cfg.exos.length===1;
+    n.querySelector('.up').onclick = ()=>{ swap(i,i-1); };
+    n.querySelector('.down').onclick = ()=>{ swap(i,i+1); };
+    n.querySelector('.del').onclick = ()=>{ cfg.exos.splice(i,1); commit(); };
+    n.querySelector('.test').onclick = ()=>{ audio.unlock(); const t=audio.ctx.currentTime+0.05; sigStart(t+2,i); sigEnd(t+3.2,i); };
+    exosEl.appendChild(n);
+  });
+  updateTotal();
+}
+function readExo(n,i){
+  const ex = cfg.exos[i];
+  ex.name = n.querySelector('.name').value.trim() || ('Exo '+String.fromCharCode(65+i));
+  ex.work = clampInt(n.querySelector('.work').value,5,600,30);
+  ex.rest = clampInt(n.querySelector('.rest').value,3,600,60);
+  ex.sets = clampInt(n.querySelector('.sets').value,1,10,3);
+  ex.sides = n.querySelector('.sides').checked;
+  commit();
+}
+function swap(a,b){ [cfg.exos[a],cfg.exos[b]]=[cfg.exos[b],cfg.exos[a]]; commit(); }
+function commit(){ save(); renderSetup(); }
+
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ cfg.mode=b.dataset.mode; commit(); });
+$('rounds').onchange = e=>{ cfg.rounds=clampInt(e.target.value,1,20,3); commit(); };
+$('tExo').onchange  = e=>{ cfg.tExo =clampInt(e.target.value,3,120,5); commit(); };
+$('tSide').onchange = e=>{ cfg.tSide=clampInt(e.target.value,3,120,3); commit(); };
+$('addExo').onclick = ()=>{
+  const last = cfg.exos[cfg.exos.length-1];
+  cfg.exos.push({name:'Exo '+String.fromCharCode(65+cfg.exos.length), work:last.work, rest:last.rest, sets:last.sets, sides:false});
+  commit();
+};
+
+function fmt(s){ s=Math.round(s); const m=Math.floor(s/60), r=s%60; return m? `${m} min ${String(r).padStart(2,'0')}` : `${r} s`; }
+function updateTotal(){ const p = buildPlan(cfg); $('total').textContent = `Durée totale : ${fmt(p.total)}`; }
+
+/* ---------- plan ---------- */
+function buildPlan(c){
+  const segs = [];
+  const exoName = i => c.exos[i].name || ('Exo '+String.fromCharCode(65+i));
+  segs.push({kind:'prep', dur:c.prep, label:'Prépare-toi'});
+  const pushWork = (i, info)=>{
+    const ex = c.exos[i];
+    const sides = ex.sides ? ['Côté gauche','Côté droit'] : [''];
+    sides.forEach((side,k)=>{
+      if(k>0) segs.push({kind:'trans', dur:c.tSide, label:'Change de côté'});
+      segs.push({kind:'work', dur:ex.work, exo:i, name:exoName(i), side, info});
+    });
+  };
+  if(c.mode==='seq'){
+    c.exos.forEach((ex,i)=>{
+      if(i>0) segs.push({kind:'trans', dur:c.tExo, label:"Change d'exo"});
+      for(let s=1;s<=ex.sets;s++){
+        if(s>1) segs.push({kind:'rest', dur:ex.rest, label:'Pause'});
+        pushWork(i, `Set ${s}/${ex.sets}`);
+      }
+    });
+  } else {
+    for(let r=1;r<=c.rounds;r++){
+      c.exos.forEach((ex,i)=>{
+        if(r>1||i>0) segs.push({kind:'trans', dur:c.tExo, label:"Change d'exo"});
+        pushWork(i, `Tour ${r}/${c.rounds}`);
+      });
+    }
+  }
+  let t=0; segs.forEach(s=>{ s.start=t; t+=s.dur; s.end=t; });
+  const works = segs.filter(s=>s.kind==='work');
+  works.forEach((s,k)=>{ s.n=k+1; });
+  return {segs, total:t, nWork:works.length};
+}
+
+/* ---------- audio ---------- */
+const audio = {
+  ctx:null, master:null, nodes:new Set(),
+  unlock(){
+    if(!this.ctx){
+      const AC = window.AudioContext||window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain(); this.master.gain.value = 0.9;
+      const comp = this.ctx.createDynamicsCompressor();
+      this.master.connect(comp); comp.connect(this.ctx.destination);
+    }
+    if(this.ctx.state!=='running') this.ctx.resume();
+  },
+  tone(t, freq, dur, vol=0.35){
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type='square'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol,t+0.008);
+    g.gain.setValueAtTime(vol,t+Math.max(0.01,dur-0.03));
+    g.gain.linearRampToValueAtTime(0,t+dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t+dur+0.02);
+    this.nodes.add(o); o.onended=()=>this.nodes.delete(o);
+  },
+  cancelAll(){ this.nodes.forEach(o=>{ try{o.stop();}catch(e){} }); this.nodes.clear(); }
+};
+// Départ : bip · bip · biiip — le biiip démarre pile au début de l'effort (t)
+function sigStart(t,i){ const f=PITCH[i%PITCH.length]; audio.tone(t-2,f,0.13); audio.tone(t-1,f,0.13); audio.tone(t,f*2,0.55); }
+// Fin : bibip (très rapide) biiip — démarre pile à la fin de l'effort (t)
+function sigEnd(t,i){ const f=PITCH[i%PITCH.length]; audio.tone(t,f*2,0.06); audio.tone(t+0.09,f*2,0.06); audio.tone(t+0.24,f,0.42); }
+function sigDone(t){ [523,659,784,1047].forEach((f,k)=>audio.tone(t+0.9+k*0.14,f,k===3?0.6:0.12,0.3)); }
+
+/* ---------- runner ---------- */
+let run = null, wakeLock = null;
+
+async function keepAwake(){ try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(run && document.visibilityState==='visible') keepAwake(); });
+const vibrate = p=>{ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+
+function buildEvents(plan){
+  const ev=[];
+  plan.segs.forEach((s,idx)=>{
+    if(s.kind!=='work') return;
+    // le signal de départ commence 2 s avant le début de l'effort
+    ev.push({t:s.start, first:s.start-2, done:false, fn:at=>sigStart(at,s.exo)});
+    ev.push({t:s.end, first:s.end, done:false, fn:at=>{ sigEnd(at,s.exo); if(idx===plan.segs.length-1) sigDone(at); }});
+  });
+  return ev.sort((a,b)=>a.first-b.first);
+}
+
+function startRun(){
+  audio.unlock();
+  const plan = buildPlan(cfg);
+  run = { plan, events:buildEvents(plan), base:audio.ctx.currentTime + 0.1, paused:false, segIdx:-1 };
+  $('setup').classList.add('hidden'); $('run').classList.remove('hidden');
+  keepAwake(); tick();
+}
+function elapsed(){ return audio.ctx.currentTime - run.base; }
+
+function tick(){
+  if(!run) return;
+  const e = elapsed();
+  // planification des sons dans les 1,5 s à venir
+  for(const ev of run.events){
+    if(ev.done) continue;
+    if(ev.first > e+1.5) break;
+    ev.done = true;
+    if(ev.first >= e-0.05) ev.fn(run.base + ev.t);
+  }
+  const segs = run.plan.segs;
+  if(e >= run.plan.total){ finish(); return; }
+  let idx = segs.findIndex(s=>e < s.end);
+  const s = segs[idx];
+  if(idx!==run.segIdx){
+    const prev = segs[run.segIdx];
+    if(s.kind==='work') vibrate(350); else if(prev && prev.kind==='work') vibrate([70,50,70]);
+    run.segIdx = idx; showSeg(s, idx);
+  }
+  const left = s.end - e;
+  $('clock').textContent = Math.max(0,Math.ceil(left-0.001));
+  $('barFill').style.width = (100*(e-s.start)/s.dur).toFixed(2)+'%';
+  $('remainTxt').textContent = 'Reste ' + fmtClock(run.plan.total - e);
+  run.raf = requestAnimationFrame(tick);
+}
+function fmtClock(s){ s=Math.max(0,Math.ceil(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+
+function showSeg(s, idx){
+  const r = $('run');
+  r.classList.remove('work','trans');
+  r.style.background = '';
+  const nextWork = run.plan.segs.slice(idx+1).find(x=>x.kind==='work');
+  if(s.kind==='work'){
+    r.classList.add('work'); r.style.background = COLORS[s.exo%COLORS.length];
+    $('phase').textContent = 'Effort';
+    $('exoName').textContent = s.name;
+    $('sub').textContent = [s.side, s.info].filter(Boolean).join(' · ');
+  } else {
+    if(s.kind==='trans') r.classList.add('trans');
+    $('phase').textContent = s.label;
+    $('exoName').textContent = nextWork ? nextWork.name : '';
+    $('sub').textContent = nextWork ? [nextWork.side, nextWork.info].filter(Boolean).join(' · ') : '';
+  }
+  $('next').textContent = s.kind!=='work' ? ''
+    : nextWork ? `Ensuite : ${nextWork.name}${nextWork.side?' ('+nextWork.side.toLowerCase()+')':''}`
+    : 'Dernier effort !';
+  const doneWorks = run.plan.segs.slice(0,idx).filter(x=>x.kind==='work').length;
+  $('progressTxt').textContent = `Effort ${Math.min(run.plan.nWork, doneWorks+ (s.kind==='work'?1:0))}/${run.plan.nWork}`;
+}
+
+function togglePause(){
+  if(!run) return;
+  run.paused = !run.paused;
+  if(run.paused){ audio.ctx.suspend(); $('pauseBtn').textContent='▶ Reprendre'; }
+  else { audio.ctx.resume(); $('pauseBtn').textContent='⏸ Pause'; }
+}
+function skip(){
+  if(!run) return;
+  const e = elapsed();
+  const i = run.plan.segs.findIndex(x=>e < x.end);
+  if(i<0) return;
+  const s = run.plan.segs[i], nx = run.plan.segs[i+1];
+  // pause/transition avant un effort : on saute à 2,5 s du départ pour garder le « bip · bip · biiip »
+  const target = (s.kind!=='work' && nx && nx.kind==='work') ? Math.max(e, s.end-2.5) : s.end-0.01;
+  if(target - e < 0.05) return;
+  audio.cancelAll();
+  run.base = audio.ctx.currentTime - target;
+  run.events.forEach(ev=>{ ev.done = ev.first < target - 0.05; });
+}
+function stopRun(){
+  if(!run) return;
+  cancelAnimationFrame(run.raf); audio.cancelAll();
+  if(audio.ctx.state==='suspended') audio.ctx.resume();
+  run=null; try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock=null;
+  $('pauseBtn').textContent='⏸ Pause';
+  $('run').classList.add('hidden'); $('setup').classList.remove('hidden');
+}
+function finish(){
+  cancelAnimationFrame(run.raf);
+  const r=$('run'); r.classList.remove('work','trans'); r.style.background='';
+  $('phase').textContent='Terminé'; $('exoName').textContent='Bravo 💪'; $('sub').textContent='';
+  $('clock').textContent='✓'; $('next').textContent=''; $('barFill').style.width='100%'; $('remainTxt').textContent='';
+  vibrate([100,80,100,80,300]);
+  setTimeout(()=>{ if(run){ run=null; try{ wakeLock && wakeLock.release(); }catch(e){} } }, 3000);
+}
+
+$('start').onclick = startRun;
+$('pauseBtn').onclick = togglePause;
+$('skipBtn').onclick = skip;
+$('stopBtn').onclick = ()=>{ if(!run || confirm('Arrêter la séance ?')) stopRun2(); };
+function stopRun2(){ if(run) stopRun(); else { $('run').classList.add('hidden'); $('setup').classList.remove('hidden'); } }
+
+renderSetup();
+
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
