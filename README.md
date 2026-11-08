@@ -6,6 +6,7 @@ Aucun serveur, aucun compte : la dernière séance est gardée dans le navigateu
 - **Enchaîné** : tous les sets de A (avec pauses), puis B, puis C…
 - **Circuit** : A → B → C, répété N tours, sans repos.
 - Option « 2 côtés » par exo, avec deux temps de transition réglables (changement d'exo, changement de côté).
+- 6 thèmes : Classique, Médiéval, Futuriste, Steampunk, Montagne, Forêt (polices hébergées dans `fonts/`, licence SIL OFL).
 - Sons : départ « bip · bip · biiip », fin « bibip-biip », hauteur différente par exo.
 
 Mise à jour : modifier les fichiers, puis changer `VERSION` dans `sw.js` pour que les appareils récupèrent la nouvelle version.
