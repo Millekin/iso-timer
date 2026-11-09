@@ -9,6 +9,7 @@ Aucun serveur, aucun compte : la dernière séance est gardée dans le navigateu
 - 6 thèmes : Classique, Médiéval, Futuriste, Steampunk, Montagne, Forêt (polices hébergées dans `fonts/`, licence SIL OFL).
 - Séances enregistrées (créer, renommer, supprimer), historique avec série de jours et calendrier.
 - Voix : annonce de l'exo suivant pendant les pauses, répliques célèbres à mi-effort (synthèse vocale de l'appareil).
+- Sons perso par personnage (import de fichier ou enregistrement au micro), stockés uniquement sur l'appareil (IndexedDB), et personnages ajoutés par l'utilisateur.
 - Volume et type de son (bip, doux, cloche, sifflet, synthé ; par défaut selon le thème).
 - Sons : départ « bip · bip · biiip », fin « bibip-biip », hauteur différente par exo.
 

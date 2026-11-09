@@ -206,12 +206,18 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .switch:checked{background:var(--accent)}
 .switch:checked::after{left:21px}
 .chars{display:flex;flex-direction:column;gap:6px}
-.char{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--field);cursor:pointer}
-.char input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
-.char div{flex:1;min-width:0}
+.char{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--field)}
+.char>input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.char .body{flex:1;min-width:0}
 .char b{font-family:var(--f-title)}
 .char small{display:block;color:var(--muted);font-size:.82rem;line-height:1.3}
-.char .icon-btn{width:34px;height:34px}
+.char .acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.char .acts button{padding:.3em .6em;font-size:.82rem;border-radius:var(--r-sm)}
+.char .acts button.rec{color:#fff;background:#c0392b;border-color:#c0392b}
+.clips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.clip{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--accent);border-radius:999px;padding:1px 2px 1px 8px;font-size:.8rem;max-width:100%}
+.clip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:12em}
+.clip button{border:0;background:none;padding:4px;width:auto;height:auto}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
 .stats div{background:var(--field);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 4px}
 .stats b{display:block;font:700 1.5rem var(--f-title);color:var(--accent)}
@@ -242,6 +248,8 @@ input[type=range]{flex:1;accent-color:var(--accent)}
   <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5l1-4.5L15.5 5l3.5 3.5-10 10z"/><path d="M13 7.5l3.5 3.5"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5v-1a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15.5V4.5M7.5 9l4.5-4.5L16.5 9M5 15v4.5h14V15"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M6 11.5a6 6 0 0 0 12 0M12 17.5V21"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10.5 10.5v6M13.5 10.5v6"/></symbol>
 </svg>
 
@@ -322,6 +330,8 @@ input[type=range]{flex:1;accent-color:var(--accent)}
     <label class="line"><span>Annoncer l'exo suivant<br><small class="hint" style="margin:0">« Fente, côté droit, set 2 sur 3 » pendant la pause</small></span><input type="checkbox" class="switch" id="voiceOn"></label>
     <label class="line"><span>Répliques à mi-effort<br><small class="hint" style="margin:0">Lues par la voix du téléphone, une au hasard</small></span><input type="checkbox" class="switch" id="quotesOn"></label>
     <div class="chars" id="chars"></div>
+    <button class="ghost" id="addChar" style="width:100%;margin-top:8px"><svg class="i"><use href="#i-plus"/></svg>Ajouter un personnage</button>
+    <p class="hint">Les sons importés ou enregistrés restent sur cet appareil : ils ne sont jamais envoyés en ligne. Si un personnage a des sons à toi, ce sont eux qui passent à la place de la voix de synthèse.</p>
   </details>
 </main>
 
@@ -363,7 +373,7 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 </template>
 
 <script>
-const VERSION = 'v3';
+const VERSION = 'v4';
 document.getElementById('ver').textContent = VERSION;
 const $ = id => document.getElementById(id);
 
@@ -423,11 +433,11 @@ function writeJSON(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch
 
 function load(){
   const s = readJSON(STORE_KEY);
-  if(s && Array.isArray(s.programs) && s.programs.length) return {volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, theme:'classique', ...s};
+  if(s && Array.isArray(s.programs) && s.programs.length) return {volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, theme:'classique', custom:[], clips:{}, ...s};
   // reprise de l'ancienne version (une seule séance)
   const old = readJSON(OLD_KEY), p = DEFAULT_PROG();
   if(old && Array.isArray(old.exos) && old.exos.length){ ['mode','rounds','tExo','tSide','prep','exos'].forEach(k=>{ if(old[k]!==undefined) p[k]=old[k]; }); }
-  return {theme:(old&&old.theme)||'classique', volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, programs:[p], current:p.id};
+  return {theme:(old&&old.theme)||'classique', volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, programs:[p], current:p.id, custom:[], clips:{}};
 }
 let S = load();
 let HIST = readJSON(HIST_KEY) || [];
@@ -471,19 +481,127 @@ function renderThemes(){
   });
 }
 
+const allChars = () => [...CHARS, ...(S.custom||[]).map(c=>({...c, lines:[], custom:true}))];
+const clipsOf = id => (S.clips && S.clips[id]) || [];
+let recording = null;
+
 function renderChars(){
   const box = $('chars'); box.innerHTML='';
   box.classList.toggle('dim', !S.quotes);
-  CHARS.forEach(c=>{
-    const row = document.createElement('label'); row.className='char';
-    row.innerHTML = `<input type="checkbox"><div><b></b><small></small></div><button class="icon-btn sound" title="Écouter" aria-label="Écouter"><svg class="i"><use href="#i-sound"/></svg></button>`;
+  allChars().forEach(c=>{
+    const row = document.createElement('div'); row.className='char';
+    row.innerHTML = `<input type="checkbox" aria-label="Activer"><div class="body"><b></b><small></small><div class="clips"></div>
+      <div class="acts">
+        <button class="listen" title="Écouter" aria-label="Écouter"><svg class="i"><use href="#i-sound"/></svg></button>
+        <button class="imp"><svg class="i"><use href="#i-upload"/></svg>Importer</button>
+        <button class="recb"><svg class="i"><use href="#i-mic"/></svg>Enregistrer</button>
+        ${c.custom?'<button class="delc"><svg class="i"><use href="#i-trash"/></svg></button>':''}
+      </div></div>`;
     const cb = row.querySelector('input'); cb.checked = S.chars.includes(c.id);
-    row.querySelector('b').textContent = c.name;
-    row.querySelector('small').textContent = c.lines.map(l=>`« ${l} »`).join('  ');
     cb.onchange = ()=>{ S.chars = cb.checked ? [...new Set([...S.chars,c.id])] : S.chars.filter(x=>x!==c.id); save(); };
-    row.querySelector('button').onclick = e=>{ e.preventDefault(); say(c.lines[Math.floor(Math.random()*c.lines.length)], c.lang); };
+    row.querySelector('b').textContent = c.name;
+    const clips = clipsOf(c.id);
+    row.querySelector('small').textContent = clips.length
+      ? `${clips.length} son${clips.length>1?'s':''} à toi`+(c.lines.length?' (la voix de synthèse n\'est plus utilisée)':'')
+      : c.lines.length ? c.lines.map(l=>`« ${l} »`).join('  ') : 'Aucun son pour l\'instant : importe ou enregistre-en un.';
+    const cl = row.querySelector('.clips');
+    clips.forEach(k=>{
+      const chip = document.createElement('span'); chip.className='clip';
+      chip.innerHTML = `<span></span><button title="Écouter" aria-label="Écouter"><svg class="i"><use href="#i-play"/></svg></button><button title="Supprimer" aria-label="Supprimer"><svg class="i"><use href="#i-x"/></svg></button>`;
+      chip.firstChild.textContent = k.label;
+      const [pl, rm] = chip.querySelectorAll('button');
+      pl.onclick = ()=>playClip(k.id);
+      rm.onclick = async ()=>{ if(!confirm(`Supprimer « ${k.label} » ?`)) return; S.clips[c.id]=clips.filter(x=>x.id!==k.id); save(); await idb.del(k.id); bufCache.delete(k.id); renderChars(); };
+      cl.appendChild(chip);
+    });
+    row.querySelector('.listen').onclick = ()=>{ const q = quoteFrom(c); if(q) playQuote(q); };
+    row.querySelector('.imp').onclick = ()=>importClip(c);
+    const rb = row.querySelector('.recb');
+    rb.onclick = ()=>recordClip(c, rb);
+    const dc = row.querySelector('.delc');
+    if(dc) dc.onclick = async ()=>{
+      if(!confirm(`Supprimer le personnage « ${c.name} » et ses sons ?`)) return;
+      for(const k of clipsOf(c.id)){ await idb.del(k.id); bufCache.delete(k.id); }
+      S.custom = S.custom.filter(x=>x.id!==c.id); delete S.clips[c.id]; S.chars = S.chars.filter(x=>x!==c.id);
+      save(); renderChars();
+    };
     box.appendChild(row);
   });
+}
+$('addChar').onclick = ()=>{
+  const name = (prompt('Nom du personnage :')||'').trim();
+  if(!name) return;
+  const c = {id:'c_'+newId(), name, lang:'fr-FR'};
+  S.custom = [...(S.custom||[]), c]; S.chars = [...S.chars, c.id]; save(); renderChars();
+};
+
+/* ---------- sons perso (stockés sur l'appareil, IndexedDB) ---------- */
+const idb = {
+  _db:null,
+  open(){ return this._db ||= new Promise((res,rej)=>{ const r=indexedDB.open('isoTimer',1); r.onupgradeneeded=()=>r.result.createObjectStore('clips'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); },
+  async tx(mode, fn){ const db=await this.open(); return new Promise((res,rej)=>{ const t=db.transaction('clips',mode); const r=fn(t.objectStore('clips')); t.oncomplete=()=>res(r && r.result); t.onerror=()=>rej(t.error); }); },
+  put(k,v){ return this.tx('readwrite', s=>s.put(v,k)); },
+  get(k){ return this.tx('readonly', s=>s.get(k)); },
+  del(k){ return this.tx('readwrite', s=>s.delete(k)); },
+};
+const MAX_BYTES = 3*1024*1024;
+async function addClip(c, arrayBuffer, label){
+  audio.unlock();
+  try{ await audio.ctx.decodeAudioData(arrayBuffer.slice(0)); }
+  catch(e){ alert("Ce fichier n'est pas un son lisible par ton appareil."); return; }
+  const id = 'k_'+newId();
+  await idb.put(id, arrayBuffer);
+  S.clips = S.clips || {}; S.clips[c.id] = [...clipsOf(c.id), {id, label}];
+  if(!S.chars.includes(c.id)) S.chars = [...S.chars, c.id];
+  save(); renderChars();
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+}
+function importClip(c){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='audio/*';
+  inp.onchange = async ()=>{
+    const f = inp.files[0]; if(!f) return;
+    if(f.size > MAX_BYTES){ alert('Fichier trop lourd (3 Mo max). Choisis un extrait court.'); return; }
+    await addClip(c, await f.arrayBuffer(), f.name.replace(/\.[^.]+$/,'').slice(0,40));
+  };
+  inp.click();
+}
+async function recordClip(c, btn){
+  if(recording){ recording.stop(); return; }
+  if(!navigator.mediaDevices || !window.MediaRecorder){ alert("L'enregistrement n'est pas possible sur ce navigateur."); return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ alert("Accès au micro refusé."); return; }
+  const rec = new MediaRecorder(stream), parts=[];
+  recording = rec;
+  let left = 10;
+  btn.classList.add('rec'); btn.innerHTML = `<svg class="i"><use href="#i-stop"/></svg>Stop (${left})`;
+  const timer = setInterval(()=>{ left--; btn.innerHTML = `<svg class="i"><use href="#i-stop"/></svg>Stop (${left})`; if(left<=0) rec.stop(); }, 1000);
+  rec.ondataavailable = e=>{ if(e.data.size) parts.push(e.data); };
+  rec.onstop = async ()=>{
+    clearInterval(timer); stream.getTracks().forEach(t=>t.stop()); recording = null;
+    const blob = new Blob(parts, {type: rec.mimeType});
+    if(blob.size) await addClip(c, await blob.arrayBuffer(), 'Enregistrement '+(clipsOf(c.id).length+1));
+    else renderChars();
+  };
+  rec.start();
+}
+const bufCache = new Map();
+async function loadBuf(id){
+  if(bufCache.has(id)) return bufCache.get(id);
+  const data = await idb.get(id); if(!data) return null;
+  audio.unlock();
+  const buf = await audio.ctx.decodeAudioData(data.slice(0));
+  bufCache.set(id, buf); return buf;
+}
+async function playClip(id, at, stopAt){
+  const buf = await loadBuf(id); if(!buf) return;
+  const src = audio.ctx.createBufferSource(); src.buffer = buf;
+  const g = audio.ctx.createGain(); g.gain.value = 1;
+  src.connect(g); g.connect(audio.master);
+  const t = at || audio.ctx.currentTime;
+  src.start(t);
+  if(stopAt && t+buf.duration > stopAt){ g.gain.setValueAtTime(1, Math.max(t, stopAt-0.15)); g.gain.linearRampToValueAtTime(0, stopAt); src.stop(stopAt+0.01); }
+  audio.nodes.add(src); src.onended=()=>audio.nodes.delete(src);
 }
 
 function renderSettings(){
@@ -697,11 +815,18 @@ if(tts) tts.onvoiceschanged = ()=>{};  // force le chargement des voix sur Chrom
 const spokenInfo = info => info.replace(/(\d+)\/(\d+)/,'$1 sur $2').toLowerCase();
 function announceText(w){ return [w.name, w.side && w.side.toLowerCase(), spokenInfo(w.info)].filter(Boolean).join(', ') + '.'; }
 let lastQuote = '';
+// un personnage avec des sons perso n'utilise que ceux-là ; sinon ses répliques en voix de synthèse
+const entriesOf = c => clipsOf(c.id).length ? clipsOf(c.id).map(k=>({c, clip:k, key:k.id})) : c.lines.map(l=>({c, l, key:l}));
+function quoteFrom(c){ const e = entriesOf(c); return e.length ? e[Math.floor(Math.random()*e.length)] : null; }
 function randomQuote(){
-  const pool = CHARS.filter(c=>S.chars.includes(c.id)).flatMap(c=>c.lines.map(l=>({c,l})));
+  const pool = allChars().filter(c=>S.chars.includes(c.id)).flatMap(entriesOf);
   if(!pool.length) return null;
-  let q; do{ q = pool[Math.floor(Math.random()*pool.length)]; }while(pool.length>1 && q.l===lastQuote);
-  lastQuote = q.l; return q;
+  let q; do{ q = pool[Math.floor(Math.random()*pool.length)]; }while(pool.length>1 && q.key===lastQuote);
+  lastQuote = q.key; return q;
+}
+function playQuote(q, stopAt){
+  audio.unlock();
+  if(q.clip) playClip(q.clip.id, null, stopAt); else say(q.l, q.c.lang);
 }
 
 /* ---------- séance ---------- */
@@ -741,6 +866,7 @@ const RESUME_HTML = '<svg class="i"><use href="#i-play"/></svg>Reprendre';
 function startRun(){
   audio.unlock();
   if(tts){ try{ tts.cancel(); tts.speak(new SpeechSynthesisUtterance(' ')); }catch(e){} } // débloque la voix (iOS)
+  allChars().filter(c=>S.chars.includes(c.id)).forEach(c=>clipsOf(c.id).forEach(k=>loadBuf(k.id).catch(()=>{})));
   const plan = buildPlan(P());
   run = { plan, prog:P().name, events:buildEvents(plan), speech:buildSpeech(plan), base:audio.ctx.currentTime + 0.1, paused:false, segIdx:-1 };
   $('pauseBtn').innerHTML = PAUSE_HTML;
@@ -776,7 +902,11 @@ function tick(){
     if(sp.kind==='announce' && S.voice) say(sp.text);
     if(sp.kind==='quote' && S.quotes){
       const q = randomQuote();
-      if(q){ say(q.l, q.c.lang); $('quote').innerHTML=''; $('quote').append(`« ${q.l} »`); const b=document.createElement('b'); b.textContent=q.c.name; $('quote').append(b); }
+      if(q){
+        playQuote(q, run.base + run.plan.segs[sp.seg].end - 0.1);
+        $('quote').innerHTML=''; $('quote').append(q.clip ? `♪ ${q.clip.label}` : `« ${q.l} »`);
+        const b=document.createElement('b'); b.textContent=q.c.name; $('quote').append(b);
+      }
     }
   }
   const left = s.end - e;
