@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Iso Timer">
 <script>
   // applique le thème avant l'affichage (évite un flash)
-  try{ const c = JSON.parse(localStorage.getItem('isoTimer.config.v1')); if(c && c.theme) document.documentElement.dataset.theme = c.theme; }catch(e){}
+  try{ const c = JSON.parse(localStorage.getItem('isoTimer.v3')) || JSON.parse(localStorage.getItem('isoTimer.config.v1')); if(c && c.theme) document.documentElement.dataset.theme = c.theme; }catch(e){}
 </script>
 <style>
 /* ---------- polices (hébergées avec l'appli, marchent hors ligne) ---------- */
@@ -184,6 +184,46 @@ h2{font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:
 [data-theme="futuriste"] #run.work{background-color:#03060b;color:var(--c)}
 [data-theme="futuriste"] #run.work #clock,[data-theme="futuriste"] #run.work #exoName{text-shadow:0 0 18px var(--c),0 0 40px var(--c)}
 [data-theme="futuriste"] #run.work{box-shadow:inset 0 0 0 3px var(--c),inset 0 0 60px color-mix(in srgb,var(--c) 35%,transparent)}
+#quote{min-height:2.8em;font:italic 1.05rem/1.35 var(--f-body);opacity:.9;max-width:28em;padding:0 8px}
+#quote b{display:block;font-style:normal;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-top:2px}
+
+/* ---------- séances, réglages, historique ---------- */
+.prog{display:flex;gap:6px;align-items:center;margin-bottom:12px}
+.prog select{flex:1;min-width:0;background:var(--field);border:var(--border-w) var(--border-style) var(--line);border-radius:var(--r-sm);padding:.55em .6em;font:700 1.05rem var(--f-title);color:var(--text)}
+details.panel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:var(--title-spacing);color:var(--text)}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:6px;transition:transform .2s}
+details.panel[open]>summary::after{transform:rotate(-135deg)}
+details.panel>summary small{font:400 .85rem var(--f-body);color:var(--muted);margin-left:auto;margin-right:12px;text-transform:none;letter-spacing:0}
+details.panel[open]>summary{margin-bottom:12px}
+.sub{font:700 .82rem var(--f-title);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px}
+.line{display:flex;align-items:center;gap:10px;margin:8px 0}
+.line>span{flex:1}
+.line select{background:var(--field);border:1px solid var(--line);border-radius:var(--r-sm);padding:.4em .5em;color:var(--text)}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.switch{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s}
+.switch:checked{background:var(--accent)}
+.switch:checked::after{left:21px}
+.chars{display:flex;flex-direction:column;gap:6px}
+.char{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--field);cursor:pointer}
+.char input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.char div{flex:1;min-width:0}
+.char b{font-family:var(--f-title)}
+.char small{display:block;color:var(--muted);font-size:.82rem;line-height:1.3}
+.char .icon-btn{width:34px;height:34px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats div{background:var(--field);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 4px}
+.stats b{display:block;font:700 1.5rem var(--f-title);color:var(--accent)}
+.stats span{font-size:.78rem;color:var(--muted)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:6px}
+.cal span{aspect-ratio:1;border-radius:4px;background:var(--field);border:1px solid var(--line);font-size:.65rem;display:grid;place-items:center;color:var(--muted)}
+.cal span.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+.cal span.today{outline:2px solid var(--accent);outline-offset:1px}
+.cal span.head{background:none;border:0;aspect-ratio:auto;font-weight:700}
+.hist{list-style:none;padding:0;margin:8px 0 0;font-size:.9rem}
+.hist li{display:flex;justify-content:space-between;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line)}
+.hist li span:last-child{color:var(--muted);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -200,10 +240,20 @@ h2{font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:
   <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></symbol>
   <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5.5 6v12l8.5-6zM18 6v12"/></symbol>
   <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5l1-4.5L15.5 5l3.5 3.5-10 10z"/><path d="M13 7.5l3.5 3.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5v-1a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10.5 10.5v6M13.5 10.5v6"/></symbol>
 </svg>
 
 <main id="setup" class="wrap">
   <h1><svg class="i"><use href="#i-logo"/></svg>Iso Timer <small id="ver"></small></h1>
+
+  <div class="prog">
+    <select id="progSel" aria-label="Séance"></select>
+    <button class="icon-btn" id="progNew" title="Nouvelle séance (copie de celle-ci)" aria-label="Nouvelle séance"><svg class="i"><use href="#i-copy"/></svg></button>
+    <button class="icon-btn" id="progRen" title="Renommer" aria-label="Renommer la séance"><svg class="i"><use href="#i-edit"/></svg></button>
+    <button class="icon-btn" id="progDel" title="Supprimer la séance" aria-label="Supprimer la séance"><svg class="i"><use href="#i-trash"/></svg></button>
+  </div>
 
   <div class="seg" role="tablist">
     <button data-mode="seq" class="on">Enchaîné</button>
@@ -233,10 +283,46 @@ h2{font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:
   </div>
   <p class="hint" style="text-align:center">iPhone : désactive le mode silencieux, sinon les bips ne sortent pas.</p>
 
-  <section class="panel" style="margin-top:22px">
-    <h2>Thème</h2>
+  <details class="panel" id="histPanel" style="margin-top:22px">
+    <summary>Historique <small id="histSummary"></small></summary>
+    <div class="stats">
+      <div><b id="stStreak">0</b><span>jours d'affilée</span></div>
+      <div><b id="stWeek">0</b><span>séances (7 j)</span></div>
+      <div><b id="stTotal">0</b><span>au total</span></div>
+    </div>
+    <div class="sub">5 dernières semaines</div>
+    <div class="cal" id="cal"></div>
+    <div class="sub">Dernières séances</div>
+    <ul class="hist" id="histList"></ul>
+    <p class="hint">Une séance compte quand elle va jusqu'au bout. Les données restent sur cet appareil.</p>
+    <button class="ghost" id="histClear" style="margin-top:8px">Effacer l'historique</button>
+  </details>
+
+  <details class="panel" id="setPanel">
+    <summary>Réglages</summary>
+
+    <div class="sub" style="margin-top:0">Thème</div>
     <div class="themes" id="themes"></div>
-  </section>
+
+    <div class="sub">Sons</div>
+    <div class="line"><span>Volume</span><input type="range" id="volume" min="0" max="100" step="5" style="flex:2"></div>
+    <div class="line"><span>Type de son</span>
+      <select id="soundType">
+        <option value="auto">Selon le thème</option>
+        <option value="bip">Bip électronique</option>
+        <option value="doux">Doux</option>
+        <option value="cloche">Cloche</option>
+        <option value="sifflet">Sifflet</option>
+        <option value="synthe">Synthé</option>
+      </select>
+      <button class="icon-btn sound" id="soundTest" title="Écouter" aria-label="Écouter"><svg class="i"><use href="#i-sound"/></svg></button>
+    </div>
+
+    <div class="sub">Voix</div>
+    <label class="line"><span>Annoncer l'exo suivant<br><small class="hint" style="margin:0">« Fente, côté droit, set 2 sur 3 » pendant la pause</small></span><input type="checkbox" class="switch" id="voiceOn"></label>
+    <label class="line"><span>Répliques à mi-effort<br><small class="hint" style="margin:0">Lues par la voix du téléphone, une au hasard</small></span><input type="checkbox" class="switch" id="quotesOn"></label>
+    <div class="chars" id="chars"></div>
+  </details>
 </main>
 
 <section id="run" class="hidden" aria-live="polite">
@@ -247,6 +333,7 @@ h2{font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:
     <div id="sub"></div>
     <div id="clock">0</div>
     <div id="next"></div>
+    <div id="quote"></div>
   </div>
   <div class="bar"><div id="barFill"></div></div>
   <div class="ctrl">
@@ -276,71 +363,152 @@ h2{font:700 1rem var(--f-title);text-transform:var(--title-case);letter-spacing:
 </template>
 
 <script>
-const VERSION = 'v2';
+const VERSION = 'v3';
 document.getElementById('ver').textContent = VERSION;
+const $ = id => document.getElementById(id);
 
 /* ---------- thèmes ---------- */
 const THEMES = {
-  classique:{label:'Classique', bar:'#111418', colors:['#4cc2ff','#ffb547','#7ee081','#ff7ab8','#b39cff','#ff8a5c','#5ce0d0','#e6e65c']},
-  medieval: {label:'Médiéval',  bar:'#3b2a1a', colors:['#a3262a','#2a4f8f','#2f6b3a','#c99a2e','#5e2f73','#b5651d','#1f1f1f','#7d8a96']},
-  futuriste:{label:'Futuriste', bar:'#04060c', colors:['#00e5ff','#ff2bd6','#b6ff00','#ffb000','#8a5cff','#ff4d4d','#00ffa3','#f5f5f5']},
-  steampunk:{label:'Steampunk', bar:'#24170e', colors:['#c8913a','#b85c38','#4c9a87','#8c2f2f','#7d8a96','#e0a43a','#5b6e3a','#d9c6a0']},
-  montagne: {label:'Montagne',  bar:'#cfe1ef', colors:['#2f6f9f','#d9822b','#3f7d4f','#8a5a9e','#c0473a','#5f7f8f','#b59a2e','#2e4a5f']},
-  foret:    {label:'Forêt',     bar:'#0f1d17', colors:['#e8a33d','#8fbf6a','#d0694a','#6fb3c9','#c9a0dc','#e0d27a','#6aa58e','#f0e6d0']},
+  classique:{label:'Classique', bar:'#111418', sound:'bip',     colors:['#4cc2ff','#ffb547','#7ee081','#ff7ab8','#b39cff','#ff8a5c','#5ce0d0','#e6e65c']},
+  medieval: {label:'Médiéval',  bar:'#3b2a1a', sound:'cloche',  colors:['#a3262a','#2a4f8f','#2f6b3a','#c99a2e','#5e2f73','#b5651d','#1f1f1f','#7d8a96']},
+  futuriste:{label:'Futuriste', bar:'#04060c', sound:'synthe',  colors:['#00e5ff','#ff2bd6','#b6ff00','#ffb000','#8a5cff','#ff4d4d','#00ffa3','#f5f5f5']},
+  steampunk:{label:'Steampunk', bar:'#24170e', sound:'sifflet', colors:['#c8913a','#b85c38','#4c9a87','#8c2f2f','#7d8a96','#e0a43a','#5b6e3a','#d9c6a0']},
+  montagne: {label:'Montagne',  bar:'#cfe1ef', sound:'doux',    colors:['#2f6f9f','#d9822b','#3f7d4f','#8a5a9e','#c0473a','#5f7f8f','#b59a2e','#2e4a5f']},
+  foret:    {label:'Forêt',     bar:'#0f1d17', sound:'doux',    colors:['#e8a33d','#8fbf6a','#d0694a','#6fb3c9','#c9a0dc','#e0d27a','#6aa58e','#f0e6d0']},
 };
-const exoColor = i => (THEMES[cfg.theme]||THEMES.classique).colors[i%8];
+const theme = () => THEMES[S.theme] || THEMES.classique;
+const exoColor = i => theme().colors[i%8];
 function textOn(hex){ // texte noir ou blanc selon la clarté de la couleur
   const n=parseInt(hex.slice(1),16), r=n>>16&255, g=n>>8&255, b=n&255;
   const L = c=>{ c/=255; return c<=.03928?c/12.92:((c+.055)/1.055)**2.4; };
   return (0.2126*L(r)+0.7152*L(g)+0.0722*L(b)) > 0.2 ? '#0b0b0b' : '#ffffff';
 }
 function applyTheme(){
-  const t = THEMES[cfg.theme] ? cfg.theme : 'classique';
+  const t = THEMES[S.theme] ? S.theme : 'classique';
   document.documentElement.dataset.theme = t;
   document.querySelector('meta[name=theme-color]').content = THEMES[t].bar;
 }
 
-/* ---------- état ---------- */
-const PITCH  = [392, 523, 659, 784, 988, 1175, 1319, 1568]; // A grave → aigu
-const STORE_KEY = 'isoTimer.config.v1';
-const DEFAULT = {
-  theme:'classique', mode:'seq', rounds:3, tExo:5, tSide:3, prep:5,
-  exos:[ {name:'Planche', work:30, rest:60, sets:3, sides:false} ]
-};
-let cfg = load();
+/* ---------- répliques (lues par la synthèse vocale du téléphone) ---------- */
+const CHARS = [
+  {id:'goggins', name:'David Goggins', lang:'en-US', lines:["Stay hard!","Who's gonna carry the boats?!","They don't know me, son!"]},
+  {id:'arnold',  name:'Arnold',        lang:'en-US', lines:["I'll be back.","Get to the choppa!","Hasta la vista, baby."]},
+  {id:'jackie',  name:'Jackie Chan Adventures', lang:'en-US', lines:["Bad day! Bad day! Bad day!","One more thing!"]},
+  {id:'jcvd',    name:'Jean-Claude Van Damme', lang:'fr-FR', lines:["Il faut être aware.","J'adore l'eau. Dans vingt, trente ans, y en aura plus."]},
+  {id:'yoda',    name:'Yoda',          lang:'fr-FR', lines:["Fais-le, ou ne le fais pas. Il n'y a pas d'essai."]},
+  {id:'gandalf', name:'Gandalf',       lang:'en-US', lines:["You shall not pass!"]},
+  {id:'leonidas',name:'Léonidas (300)',lang:'fr-FR', lines:["Ceci est Sparte !","Ce soir, nous dînerons en enfer !"]},
+  {id:'rocky',   name:'Rocky',         lang:'fr-FR', lines:["Ce qui compte, c'est combien de coups tu encaisses en continuant d'avancer."]},
+  {id:'vegeta',  name:'Vegeta',        lang:'en-US', lines:["It's over nine thousand!"]},
+  {id:'shia',    name:'Shia LaBeouf',  lang:'en-US', lines:["Just do it! Don't let your dreams be dreams!"]},
+  {id:'miyagi',  name:'M. Miyagi',     lang:'en-US', lines:["Wax on. Wax off."]},
+  {id:'brucelee',name:'Bruce Lee',     lang:'en-US', lines:["Be water, my friend."]},
+  {id:'ali',     name:'Muhammad Ali',  lang:'en-US', lines:["Float like a butterfly, sting like a bee!"]},
+  {id:'dory',    name:'Dory',          lang:'fr-FR', lines:["Continue de nager, continue de nager !"]},
+  {id:'buzz',    name:"Buzz l'Éclair", lang:'fr-FR', lines:["Vers l'infini et au-delà !"]},
+  {id:'kaamelott',name:'Kaamelott',    lang:'fr-FR', lines:["C'est pas faux !","Le gras, c'est la vie !"]},
+  {id:'obelix',  name:'Obélix',        lang:'fr-FR', lines:["Ils sont fous ces Romains !"]},
+  {id:'jacquouille',name:'Jacquouille (Les Visiteurs)', lang:'fr-FR', lines:["Okaaaay !"]},
+];
+
+/* ---------- stockage ---------- */
+const STORE_KEY = 'isoTimer.v3', OLD_KEY = 'isoTimer.config.v1', HIST_KEY = 'isoTimer.history';
+const newId = () => Math.random().toString(36).slice(2,9);
+const DEFAULT_PROG = () => ({id:newId(), name:'Ma séance', mode:'seq', rounds:3, tExo:5, tSide:3, prep:5,
+  exos:[{name:'Planche', work:30, rest:60, sets:3, sides:false}]});
+const DEFAULT_CHARS = ['goggins','arnold','jcvd','yoda','gandalf','leonidas','dory','kaamelott'];
+
+function readJSON(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function writeJSON(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 
 function load(){
-  try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && Array.isArray(s.exos) && s.exos.length) return {...DEFAULT, ...s}; }catch(e){}
-  return structuredClone(DEFAULT);
+  const s = readJSON(STORE_KEY);
+  if(s && Array.isArray(s.programs) && s.programs.length) return {volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, theme:'classique', ...s};
+  // reprise de l'ancienne version (une seule séance)
+  const old = readJSON(OLD_KEY), p = DEFAULT_PROG();
+  if(old && Array.isArray(old.exos) && old.exos.length){ ['mode','rounds','tExo','tSide','prep','exos'].forEach(k=>{ if(old[k]!==undefined) p[k]=old[k]; }); }
+  return {theme:(old&&old.theme)||'classique', volume:80, sound:'auto', voice:true, quotes:true, chars:DEFAULT_CHARS, programs:[p], current:p.id};
 }
-function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); }catch(e){} }
+let S = load();
+let HIST = readJSON(HIST_KEY) || [];
+const P = () => S.programs.find(p=>p.id===S.current) || S.programs[0];
+function save(){ writeJSON(STORE_KEY, S); }
 const clampInt = (v,min,max,def)=>{ v = parseInt(v,10); if(isNaN(v)) v = def; return Math.min(max,Math.max(min,v)); };
 
-/* ---------- réglages ---------- */
-const $ = id => document.getElementById(id);
+/* ---------- écran de réglages ---------- */
 const exosEl = $('exos');
+
+function renderProgs(){
+  const sel = $('progSel'); sel.innerHTML='';
+  S.programs.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o); });
+  sel.value = P().id;
+  $('progDel').disabled = S.programs.length===1;
+}
+$('progSel').onchange = e=>{ S.current = e.target.value; commit(); };
+$('progNew').onclick = ()=>{
+  const name = (prompt('Nom de la nouvelle séance (elle part d\'une copie de celle-ci) :', P().name+' 2')||'').trim();
+  if(!name) return;
+  const p = structuredClone(P()); p.id=newId(); p.name=name;
+  S.programs.push(p); S.current=p.id; commit();
+};
+$('progRen').onclick = ()=>{
+  const name = (prompt('Nouveau nom :', P().name)||'').trim();
+  if(name){ P().name = name; commit(); }
+};
+$('progDel').onclick = ()=>{
+  if(S.programs.length<2 || !confirm(`Supprimer la séance « ${P().name} » ?`)) return;
+  S.programs = S.programs.filter(p=>p.id!==S.current); S.current = S.programs[0].id; commit();
+};
 
 function renderThemes(){
   const box = $('themes'); box.innerHTML='';
   Object.entries(THEMES).forEach(([key,t])=>{
     const b = document.createElement('button');
-    b.className = key===cfg.theme ? 'on' : '';
+    b.className = key===S.theme ? 'on' : '';
     b.innerHTML = `<span class="sw">${t.colors.slice(0,4).map(c=>`<i style="background:${c}"></i>`).join('')}</span>${t.label}`;
-    b.onclick = ()=>{ cfg.theme=key; commit(); };
+    b.onclick = ()=>{ S.theme=key; commit(); };
     box.appendChild(b);
   });
 }
 
+function renderChars(){
+  const box = $('chars'); box.innerHTML='';
+  box.classList.toggle('dim', !S.quotes);
+  CHARS.forEach(c=>{
+    const row = document.createElement('label'); row.className='char';
+    row.innerHTML = `<input type="checkbox"><div><b></b><small></small></div><button class="icon-btn sound" title="Écouter" aria-label="Écouter"><svg class="i"><use href="#i-sound"/></svg></button>`;
+    const cb = row.querySelector('input'); cb.checked = S.chars.includes(c.id);
+    row.querySelector('b').textContent = c.name;
+    row.querySelector('small').textContent = c.lines.map(l=>`« ${l} »`).join('  ');
+    cb.onchange = ()=>{ S.chars = cb.checked ? [...new Set([...S.chars,c.id])] : S.chars.filter(x=>x!==c.id); save(); };
+    row.querySelector('button').onclick = e=>{ e.preventDefault(); say(c.lines[Math.floor(Math.random()*c.lines.length)], c.lang); };
+    box.appendChild(row);
+  });
+}
+
+function renderSettings(){
+  $('volume').value = S.volume; $('soundType').value = S.sound;
+  $('voiceOn').checked = S.voice; $('quotesOn').checked = S.quotes;
+  renderThemes(); renderChars();
+}
+$('volume').oninput = e=>{ S.volume = +e.target.value; if(audio.master) audio.master.gain.value = audio.gain(); };
+$('volume').onchange = ()=>{ save(); testSound(0); };
+$('soundType').onchange = e=>{ S.sound = e.target.value; save(); testSound(0); };
+$('soundTest').onclick = ()=>testSound(0);
+$('voiceOn').onchange = e=>{ S.voice = e.target.checked; save(); if(S.voice) say('Planche, côté droit, set 2 sur 3.','fr-FR'); };
+$('quotesOn').onchange = e=>{ S.quotes = e.target.checked; save(); renderChars(); };
+
 function renderSetup(){
-  applyTheme(); renderThemes();
-  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===cfg.mode));
-  $('modeHint').textContent = cfg.mode==='seq'
+  applyTheme(); renderProgs();
+  const c = P();
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===c.mode));
+  $('modeHint').textContent = c.mode==='seq'
     ? "Tous les sets de A (avec pauses), puis B, puis C…"
     : "A → B → C → A → B → C… sans repos, sur le nombre de tours choisi.";
-  $('roundsField').classList.toggle('dim', cfg.mode!=='circuit');
-  $('rounds').value = cfg.rounds; $('tExo').value = cfg.tExo; $('tSide').value = cfg.tSide;
+  $('roundsField').classList.toggle('dim', c.mode!=='circuit');
+  $('rounds').value = c.rounds; $('tExo').value = c.tExo; $('tSide').value = c.tSide;
   exosEl.innerHTML = '';
-  cfg.exos.forEach((ex,i)=>{
+  c.exos.forEach((ex,i)=>{
     const n = $('exoTpl').content.firstElementChild.cloneNode(true);
     n.style.setProperty('--c', exoColor(i));
     n.style.setProperty('--c-fg', textOn(exoColor(i)));
@@ -348,20 +516,20 @@ function renderSetup(){
     const f = (sel,key)=>{ const el=n.querySelector(sel); el.value=ex[key]; el.addEventListener('change',()=>{ readExo(n,i); }); };
     f('.name','name'); f('.work','work'); f('.rest','rest'); f('.sets','sets');
     const sd = n.querySelector('.sides'); sd.checked = ex.sides; sd.addEventListener('change',()=>readExo(n,i));
-    n.querySelectorAll('.seqOnly').forEach(el=>el.classList.toggle('dim', cfg.mode!=='seq'));
+    n.querySelectorAll('.seqOnly').forEach(el=>el.classList.toggle('dim', c.mode!=='seq'));
     n.querySelector('.up').disabled = i===0;
-    n.querySelector('.down').disabled = i===cfg.exos.length-1;
-    n.querySelector('.del').disabled = cfg.exos.length===1;
+    n.querySelector('.down').disabled = i===c.exos.length-1;
+    n.querySelector('.del').disabled = c.exos.length===1;
     n.querySelector('.up').onclick = ()=>{ swap(i,i-1); };
     n.querySelector('.down').onclick = ()=>{ swap(i,i+1); };
-    n.querySelector('.del').onclick = ()=>{ cfg.exos.splice(i,1); commit(); };
-    n.querySelector('.test').onclick = ()=>{ audio.unlock(); const t=audio.ctx.currentTime+0.05; sigStart(t+2,i); sigEnd(t+3.2,i); };
+    n.querySelector('.del').onclick = ()=>{ c.exos.splice(i,1); commit(); };
+    n.querySelector('.test').onclick = ()=>testSound(i);
     exosEl.appendChild(n);
   });
-  updateTotal();
+  updateTotal(); renderHistory();
 }
 function readExo(n,i){
-  const ex = cfg.exos[i];
+  const ex = P().exos[i];
   ex.name = n.querySelector('.name').value.trim() || ('Exo '+String.fromCharCode(65+i));
   ex.work = clampInt(n.querySelector('.work').value,5,600,30);
   ex.rest = clampInt(n.querySelector('.rest').value,3,600,60);
@@ -369,27 +537,58 @@ function readExo(n,i){
   ex.sides = n.querySelector('.sides').checked;
   commit();
 }
-function swap(a,b){ [cfg.exos[a],cfg.exos[b]]=[cfg.exos[b],cfg.exos[a]]; commit(); }
-function commit(){ save(); renderSetup(); }
+function swap(a,b){ const e=P().exos; [e[a],e[b]]=[e[b],e[a]]; commit(); }
+function commit(){ save(); renderSetup(); renderThemes(); }
 
-document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ cfg.mode=b.dataset.mode; commit(); });
-$('rounds').onchange = e=>{ cfg.rounds=clampInt(e.target.value,1,20,3); commit(); };
-$('tExo').onchange  = e=>{ cfg.tExo =clampInt(e.target.value,3,120,5); commit(); };
-$('tSide').onchange = e=>{ cfg.tSide=clampInt(e.target.value,3,120,3); commit(); };
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ P().mode=b.dataset.mode; commit(); });
+$('rounds').onchange = e=>{ P().rounds=clampInt(e.target.value,1,20,3); commit(); };
+$('tExo').onchange  = e=>{ P().tExo =clampInt(e.target.value,3,120,5); commit(); };
+$('tSide').onchange = e=>{ P().tSide=clampInt(e.target.value,3,120,3); commit(); };
 $('addExo').onclick = ()=>{
-  const last = cfg.exos[cfg.exos.length-1];
-  cfg.exos.push({name:'Exo '+String.fromCharCode(65+cfg.exos.length), work:last.work, rest:last.rest, sets:last.sets, sides:false});
+  const e = P().exos, last = e[e.length-1];
+  e.push({name:'Exo '+String.fromCharCode(65+e.length), work:last.work, rest:last.rest, sets:last.sets, sides:false});
   commit();
 };
 
 function fmt(s){ s=Math.round(s); const m=Math.floor(s/60), r=s%60; return m? `${m} min ${String(r).padStart(2,'0')}` : `${r} s`; }
-function updateTotal(){ const p = buildPlan(cfg); $('total').textContent = `Durée totale : ${fmt(p.total)}`; }
+function updateTotal(){ const p = buildPlan(P()); $('total').textContent = `Durée totale : ${fmt(p.total)}`; }
+
+/* ---------- historique ---------- */
+const dayKey = d => { const x=new Date(d); return `${x.getFullYear()}-${x.getMonth()+1}-${x.getDate()}`; };
+function streak(){
+  const days = new Set(HIST.map(h=>dayKey(h.t)));
+  const d = new Date(); let n = 0;
+  if(!days.has(dayKey(d))) d.setDate(d.getDate()-1); // la série tient encore si on n'a pas encore fait la séance du jour
+  while(days.has(dayKey(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function renderHistory(){
+  const st = streak(), week = HIST.filter(h=>Date.now()-h.t < 7*864e5).length;
+  $('stStreak').textContent = st; $('stWeek').textContent = week; $('stTotal').textContent = HIST.length;
+  $('histSummary').textContent = HIST.length ? `${st} j d'affilée` : '';
+  // calendrier : 5 semaines, lundi → dimanche
+  const cal = $('cal'); cal.innerHTML = ['L','M','M','J','V','S','D'].map(x=>`<span class="head">${x}</span>`).join('');
+  const days = new Set(HIST.map(h=>dayKey(h.t)));
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(today); start.setDate(start.getDate() - ((today.getDay()+6)%7) - 28);
+  for(let i=0;i<35;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const s = document.createElement('span'); s.textContent = d.getDate();
+    if(days.has(dayKey(d))) s.classList.add('on');
+    if(+d===+today) s.classList.add('today');
+    if(d>today) s.style.opacity='.35';
+    cal.appendChild(s);
+  }
+  const fmtDate = t => new Date(t).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+  $('histList').innerHTML = HIST.slice(-6).reverse().map(h=>`<li><span>${fmtDate(h.t)} · ${h.name.replace(/[<&]/g,'')}</span><span>${fmt(h.dur)}</span></li>`).join('') || '<li><span>Aucune séance pour l\'instant</span></li>';
+}
+$('histClear').onclick = ()=>{ if(confirm("Effacer tout l'historique ?")){ HIST=[]; writeJSON(HIST_KEY,HIST); renderHistory(); } };
 
 /* ---------- programme ---------- */
 function buildPlan(c){
   const segs = [];
   const exoName = i => c.exos[i].name || ('Exo '+String.fromCharCode(65+i));
-  segs.push({kind:'prep', dur:c.prep, label:'Prépare-toi'});
+  segs.push({kind:'prep', dur:c.prep||5, label:'Prépare-toi'});
   const pushWork = (i, info)=>{
     const ex = c.exos[i];
     const sides = ex.sides ? ['Côté gauche','Côté droit'] : [''];
@@ -421,28 +620,52 @@ function buildPlan(c){
 }
 
 /* ---------- sons ---------- */
+const PITCH = [392, 523, 659, 784, 988, 1175, 1319, 1568]; // A grave → aigu
 const audio = {
   ctx:null, master:null, nodes:new Set(),
+  gain(){ return 1.1 * (S.volume/100) ** 1.5; },
   unlock(){
     if(!this.ctx){
       const AC = window.AudioContext||window.webkitAudioContext;
       this.ctx = new AC();
-      this.master = this.ctx.createGain(); this.master.gain.value = 0.9;
+      this.master = this.ctx.createGain(); this.master.gain.value = this.gain();
       const comp = this.ctx.createDynamicsCompressor();
       this.master.connect(comp); comp.connect(this.ctx.destination);
     }
     if(this.ctx.state!=='running') this.ctx.resume();
   },
-  tone(t, freq, dur, vol=0.35){
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-    o.type='square'; o.frequency.value=freq;
-    g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(vol,t+0.008);
-    g.gain.setValueAtTime(vol,t+Math.max(0.01,dur-0.03));
-    g.gain.linearRampToValueAtTime(0,t+dur);
-    o.connect(g); g.connect(this.master);
-    o.start(t); o.stop(t+dur+0.02);
+  osc(t, type, freq, stopAt, out){
+    const o = this.ctx.createOscillator(); o.type=type; o.frequency.value=freq;
+    o.connect(out); o.start(t); o.stop(stopAt);
     this.nodes.add(o); o.onended=()=>this.nodes.delete(o);
+    return o;
+  },
+  tone(t, freq, dur, vol=0.35){
+    const kind = S.sound==='auto' ? theme().sound : S.sound;
+    const g = this.ctx.createGain(); g.connect(this.master);
+    if(kind==='cloche'){            // attaque nette, longue résonance, partiel inharmonique
+      const tail = Math.max(dur*2.2, 0.35);
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol*1.2,t+0.004); g.gain.exponentialRampToValueAtTime(0.001,t+tail);
+      this.osc(t,'sine',freq,t+tail+0.05,g);
+      const g2 = this.ctx.createGain(); g2.gain.value = 0.35; g2.connect(g);
+      this.osc(t,'sine',freq*2.76,t+tail+0.05,g2);
+      return;
+    }
+    const type = {bip:'square', doux:'sine', sifflet:'triangle', synthe:'sawtooth'}[kind] || 'square';
+    const v = vol * ({doux:1.5, sifflet:1.4, synthe:0.8}[kind] || 1);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(v,t+0.008);
+    g.gain.setValueAtTime(v,t+Math.max(0.01,dur-0.03));
+    g.gain.linearRampToValueAtTime(0,t+dur);
+    let out = g;
+    if(kind==='synthe'){ const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq*4; f.Q.value=6; f.connect(g); out=f; }
+    if(kind==='sifflet'){ // léger vibrato
+      const o = this.osc(t,type,freq,t+dur+0.02,out);
+      const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain(); lfo.frequency.value=7; lg.gain.value=freq*0.012;
+      lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t+dur+0.02);
+      return;
+    }
+    this.osc(t,type,freq,t+dur+0.02,out);
   },
   cancelAll(){ this.nodes.forEach(o=>{ try{o.stop();}catch(e){} }); this.nodes.clear(); }
 };
@@ -451,6 +674,35 @@ function sigStart(t,i){ const f=PITCH[i%PITCH.length]; audio.tone(t-2,f,0.13); a
 // Fin : bibip (très rapide) biiip — démarre pile à la fin de l'effort (t)
 function sigEnd(t,i){ const f=PITCH[i%PITCH.length]; audio.tone(t,f*2,0.06); audio.tone(t+0.09,f*2,0.06); audio.tone(t+0.24,f,0.42); }
 function sigDone(t){ [523,659,784,1047].forEach((f,k)=>audio.tone(t+0.9+k*0.14,f,k===3?0.6:0.12,0.3)); }
+function testSound(i){ audio.unlock(); const t=audio.ctx.currentTime+0.05; sigStart(t+2,i); sigEnd(t+3.2,i); }
+
+/* ---------- voix ---------- */
+const tts = window.speechSynthesis;
+function pickVoice(lang){
+  if(!tts) return null;
+  const vs = tts.getVoices(), base = lang.slice(0,2);
+  return vs.find(v=>v.lang===lang && v.localService) || vs.find(v=>v.lang===lang) || vs.find(v=>v.lang.replace('_','-').startsWith(base)) || null;
+}
+function say(text, lang='fr-FR'){
+  if(!tts || !text) return;
+  try{
+    tts.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.volume = Math.min(1, S.volume/100 + 0.15); u.rate = 1.02;
+    const v = pickVoice(lang); if(v) u.voice = v;
+    tts.speak(u);
+  }catch(e){}
+}
+if(tts) tts.onvoiceschanged = ()=>{};  // force le chargement des voix sur Chrome
+const spokenInfo = info => info.replace(/(\d+)\/(\d+)/,'$1 sur $2').toLowerCase();
+function announceText(w){ return [w.name, w.side && w.side.toLowerCase(), spokenInfo(w.info)].filter(Boolean).join(', ') + '.'; }
+let lastQuote = '';
+function randomQuote(){
+  const pool = CHARS.filter(c=>S.chars.includes(c.id)).flatMap(c=>c.lines.map(l=>({c,l})));
+  if(!pool.length) return null;
+  let q; do{ q = pool[Math.floor(Math.random()*pool.length)]; }while(pool.length>1 && q.l===lastQuote);
+  lastQuote = q.l; return q;
+}
 
 /* ---------- séance ---------- */
 let run = null, wakeLock = null;
@@ -469,14 +721,28 @@ function buildEvents(plan){
   });
   return ev.sort((a,b)=>a.first-b.first);
 }
+// moments de parole : annonce de l'exo suivant pendant les pauses, réplique à mi-effort
+function buildSpeech(plan){
+  const sp=[];
+  plan.segs.forEach((s,idx)=>{
+    if(s.kind==='work'){
+      if(s.dur>=10) sp.push({t:s.start+s.dur/2, kind:'quote', seg:idx});
+    } else {
+      const w = plan.segs.slice(idx+1).find(x=>x.kind==='work');
+      if(w) sp.push({t:Math.max(s.start+0.3, s.end-7), kind:'announce', text:announceText(w), seg:idx});
+    }
+  });
+  return sp;
+}
 
 const PAUSE_HTML  = '<svg class="i"><use href="#i-pause"/></svg>Pause';
 const RESUME_HTML = '<svg class="i"><use href="#i-play"/></svg>Reprendre';
 
 function startRun(){
   audio.unlock();
-  const plan = buildPlan(cfg);
-  run = { plan, events:buildEvents(plan), base:audio.ctx.currentTime + 0.1, paused:false, segIdx:-1 };
+  if(tts){ try{ tts.cancel(); tts.speak(new SpeechSynthesisUtterance(' ')); }catch(e){} } // débloque la voix (iOS)
+  const plan = buildPlan(P());
+  run = { plan, prog:P().name, events:buildEvents(plan), speech:buildSpeech(plan), base:audio.ctx.currentTime + 0.1, paused:false, segIdx:-1 };
   $('pauseBtn').innerHTML = PAUSE_HTML;
   $('setup').classList.add('hidden'); $('run').classList.remove('hidden');
   keepAwake(); tick();
@@ -484,7 +750,7 @@ function startRun(){
 function elapsed(){ return audio.ctx.currentTime - run.base; }
 
 function tick(){
-  if(!run) return;
+  if(!run || run.finished) return;
   const e = elapsed();
   // planification des sons dans les 1,5 s à venir
   for(const ev of run.events){
@@ -502,6 +768,17 @@ function tick(){
     if(s.kind==='work') vibrate(350); else if(prev && prev.kind==='work') vibrate([70,50,70]);
     run.segIdx = idx; showSeg(s, idx);
   }
+  // paroles (on ignore celles ratées de plus d'une seconde, ex. après « Passer »)
+  if(!run.paused) for(const sp of run.speech){
+    if(sp.done || sp.t > e) continue;
+    sp.done = true;
+    if(e - sp.t > 1) continue;
+    if(sp.kind==='announce' && S.voice) say(sp.text);
+    if(sp.kind==='quote' && S.quotes){
+      const q = randomQuote();
+      if(q){ say(q.l, q.c.lang); $('quote').innerHTML=''; $('quote').append(`« ${q.l} »`); const b=document.createElement('b'); b.textContent=q.c.name; $('quote').append(b); }
+    }
+  }
   const left = s.end - e;
   $('clock').textContent = Math.max(0,Math.ceil(left-0.001));
   $('barFill').style.width = (100*(e-s.start)/s.dur).toFixed(2)+'%';
@@ -513,6 +790,7 @@ function fmtClock(s){ s=Math.max(0,Math.ceil(s)); return `${Math.floor(s/60)}:${
 function showSeg(s, idx){
   const r = $('run');
   r.classList.remove('work','trans');
+  $('quote').textContent = '';
   const nextWork = run.plan.segs.slice(idx+1).find(x=>x.kind==='work');
   if(s.kind==='work'){
     const c = exoColor(s.exo);
@@ -535,13 +813,13 @@ function showSeg(s, idx){
 }
 
 function togglePause(){
-  if(!run) return;
+  if(!run || run.finished) return;
   run.paused = !run.paused;
-  if(run.paused){ audio.ctx.suspend(); $('pauseBtn').innerHTML=RESUME_HTML; }
+  if(run.paused){ audio.ctx.suspend(); if(tts) tts.cancel(); $('pauseBtn').innerHTML=RESUME_HTML; }
   else { audio.ctx.resume(); $('pauseBtn').innerHTML=PAUSE_HTML; }
 }
 function skip(){
-  if(!run) return;
+  if(!run || run.finished) return;
   const e = elapsed();
   const i = run.plan.segs.findIndex(x=>e < x.end);
   if(i<0) return;
@@ -549,23 +827,34 @@ function skip(){
   // pause/transition avant un effort : on saute à 2,5 s du départ pour garder le « bip · bip · biiip »
   const target = (s.kind!=='work' && nx && nx.kind==='work') ? Math.max(e, s.end-2.5) : s.end-0.01;
   if(target - e < 0.05) return;
-  audio.cancelAll();
+  audio.cancelAll(); if(tts) tts.cancel();
   run.base = audio.ctx.currentTime - target;
+  // l'annonce de l'exo suivant n'est pas perdue quand on passe une pause
+  const an = run.speech.find(sp=>sp.kind==='announce' && sp.seg===i && !sp.done);
+  if(an){ an.done = true; if(S.voice) say(an.text); }
   run.events.forEach(ev=>{ ev.done = ev.first < target - 0.05; });
 }
 function backToSetup(){
   if(run){ cancelAnimationFrame(run.raf); audio.cancelAll(); }
+  if(tts) tts.cancel();
   if(audio.ctx && audio.ctx.state==='suspended') audio.ctx.resume();
   run=null; try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock=null;
   $('run').classList.add('hidden'); $('setup').classList.remove('hidden');
+  renderSetup();
 }
 function finish(){
   cancelAnimationFrame(run.raf);
-  const r=$('run'); r.classList.remove('work','trans');
-  $('phase').textContent='Terminé'; $('exoName').textContent='Bravo !'; $('sub').textContent='';
-  $('clock').textContent='✓'; $('next').textContent=''; $('barFill').style.width='100%'; $('remainTxt').textContent='';
-  vibrate([100,80,100,80,300]);
   run.finished = true;
+  HIST.push({t:Date.now(), name:run.prog, dur:run.plan.total, n:run.plan.nWork});
+  if(HIST.length>1000) HIST = HIST.slice(-1000);
+  writeJSON(HIST_KEY, HIST);
+  const r=$('run'); r.classList.remove('work','trans');
+  $('phase').textContent='Terminé'; $('exoName').textContent='Bravo !';
+  const st = streak();
+  $('sub').textContent = st>1 ? `${st} jours d'affilée` : 'Séance enregistrée';
+  $('clock').textContent='✓'; $('next').textContent=''; $('quote').textContent=''; $('barFill').style.width='100%'; $('remainTxt').textContent='';
+  vibrate([100,80,100,80,300]);
+  if(S.voice) setTimeout(()=>say(st>1 ? `Séance terminée. ${st} jours d'affilée.` : 'Séance terminée. Bravo.'), 1800);
 }
 
 $('start').onclick = startRun;
@@ -573,7 +862,7 @@ $('pauseBtn').onclick = togglePause;
 $('skipBtn').onclick = skip;
 $('stopBtn').onclick = ()=>{ if(!run || run.finished || confirm('Arrêter la séance ?')) backToSetup(); };
 
-renderSetup();
+renderSetup(); renderSettings();
 
 if('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
